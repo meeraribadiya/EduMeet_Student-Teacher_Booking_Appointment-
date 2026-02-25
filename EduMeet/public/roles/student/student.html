@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard - EduBook</title>
+    <link rel="stylesheet" href="../../assets/css/style.css">
+    <style>
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .teacher-card {
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            background: var(--bg-card);
+            text-align: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .teacher-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .badge-link {
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: var(--primary);
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 5px;
+            padding: 2px 8px;
+            border: 1px solid var(--primary);
+            border-radius: 4px;
+        }
+
+        .badge-link:hover {
+            background: var(--primary);
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="navbar-container"></div>
+
+    <!-- Mobile Sidebar Toggle -->
+    <button class="sidebar-toggle" onclick="window.toggleSidebar()" aria-label="Toggle Sidebar">
+        <span></span>
+    </button>
+    <div class="sidebar-backdrop" onclick="window.toggleSidebar()"></div>
+
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h3>Student Panel</h3>
+            </div>
+            <div class="mb-4 text-sm text-muted p-4 border-b border-gray-100">
+                Welcome, <span id="student-name-display" class="font-bold text-main">Loading...</span>
+            </div>
+            <ul class="sidebar-nav">
+                <li><a href="#" class="sidebar-link active" data-tab="dashboard">My Appointments</a></li>
+                <li><a href="#" class="sidebar-link" data-tab="search">Find Teachers</a></li>
+            </ul>
+            <div class="mt-auto p-4 flex flex-col gap-2">
+                <a class="btn btn-secondary btn-sm w-full" href="view-appointments.html">Full History</a>
+                <button class="btn btn-primary btn-sm w-full"
+                    onclick="document.querySelector('[data-tab=search]').click()">New Booking</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div id="dashboard" class="tab-content active">
+                <h1 class="mb-4 text-2xl font-bold">Upcoming Sessions</h1>
+                <div class="card">
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th class="p-4">Teacher</th>
+                                    <th class="p-4">Schedule</th>
+                                    <th class="p-4">Status & Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="my-appointments-body">
+                                <tr>
+                                    <td colspan="3" class="p-8 text-center text-muted">
+                                        Checking for sessions...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="search" class="tab-content">
+                <h1 class="mb-2 text-2xl font-bold">Discover Teachers</h1>
+                <p class="text-muted mb-6 text-sm">Search by name or subject to book a session.</p>
+
+                <div class="form-group mb-8">
+                    <input type="text" id="teacher-search-input" class="form-input"
+                        placeholder="Search e.g. 'Mathematics' or 'John Doe'...">
+                </div>
+
+                <div id="teachers-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="booking-modal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 1000; padding: 1rem;">
+        <div class="card" style="width: 100%; max-width: 450px; position: relative;">
+            <div class="flex justify-between items-center mb-6">
+                <h3 id="modal-title" class="text-xl font-bold">Book Session</h3>
+                <button id="close-modal-btn"
+                    style="font-size: 1.5rem; background: none; border: none; cursor: pointer; color: var(--text-muted)">&times;</button>
+            </div>
+            <form id="quick-book-form">
+                <input type="hidden" id="modal-teacher-id">
+                <input type="hidden" id="modal-teacher-name">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="form-group">
+                        <label class="form-label">Preferred Date</label>
+                        <input type="date" id="modal-date" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Preferred Time</label>
+                        <input type="time" id="modal-time" class="form-input" required>
+                    </div>
+                </div>
+                <div class="form-group mt-4">
+                    <label class="form-label">Session Topic / Message</label>
+                    <textarea id="modal-desc" class="form-input" rows="3" placeholder="What would you like to discuss?"
+                        required></textarea>
+                </div>
+                <button type="submit" id="confirm-booking-btn" class="btn btn-primary w-full mt-4">Send Booking
+                    Request</button>
+            </form>
+        </div>
+    </div>
+
+    <script type="module">
+        import { db, auth, renderNavbar, requireAuth } from '../../assets/js/utils.js';
+        import { collection, query, where, onSnapshot, getDocs, addDoc, serverTimestamp, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+        requireAuth('student');
+        renderNavbar();
+
+        let studentName = "";
+
+        /**
+         * 1. Navigation Logic
+         */
+        document.querySelectorAll('.sidebar-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+
+                link.classList.add('active');
+                const targetTab = document.getElementById(link.dataset.tab);
+                if (targetTab) targetTab.classList.add('active');
+            });
+        });
+
+        // Sidebar Toggle Logic
+        window.toggleSidebar = () => {
+            document.querySelector('.sidebar').classList.toggle('open');
+            document.querySelector('.sidebar-backdrop').classList.toggle('active');
+            const toggleBtn = document.querySelector('.sidebar-toggle');
+            if (toggleBtn) toggleBtn.classList.toggle('open');
+        };
+
+        /**
+         * 2. Initialization & Data Loading
+         */
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                try {
+                    const sDoc = await getDoc(doc(db, "users", user.uid));
+                    studentName = sDoc.exists() ? sDoc.data().name : "Student";
+                    document.getElementById('student-name-display').textContent = studentName;
+
+                    loadMyAppointments(user.uid);
+                    loadTeachers();
+                } catch (error) {
+                    console.error("Auth init error:", error);
+                }
+            }
+        });
+
+        /**
+         * 3. Sync Student's Appointments
+         * Listens for real-time changes in appointments collection for this student
+         */
+        function loadMyAppointments(uid) {
+            const q = query(collection(db, "appointments"), where("studentId", "==", uid));
+            // Real-time listener: updates UI whenever database changes
+            onSnapshot(q, (snapshot) => {
+                const tbody = document.getElementById('my-appointments-body');
+
+                if (snapshot.empty) {
+                    tbody.innerHTML = '<tr><td colspan="3" class="p-10 text-center text-muted italic" style="display: block; width: 100%;">You have no active appointments. Find a teacher to get started!</td></tr>';
+                    return;
+                }
+
+                // Render list, sorted by creation time (Recent first)
+                tbody.innerHTML = snapshot.docs
+                    .sort((a, b) => new Date(b.data().createdAt?.toDate()) - new Date(a.data().createdAt?.toDate()))
+                    .map(docSnap => {
+                        const a = docSnap.data();
+                        const statusClass = a.status === 'approved' ? 'badge-approved' :
+                            (a.status === 'pending' ? 'badge-pending' : 'badge-rejected');
+
+                        return `
+                            <tr style="border-bottom: 1px solid var(--border-color);">
+                                <td class="p-4" data-label="Teacher">
+                                    <div class="font-bold text-main">${a.teacherName}</div>
+                                    <div class="text-xs text-muted">Online Session</div>
+                                </td>
+                                <td class="p-4" data-label="Schedule">
+                                    <div class="text-sm font-bold">${a.date}</div>
+                                    <div class="text-xs text-muted">${a.time}</div>
+                                </td>
+                                <td class="p-4" data-label="Status & Action">
+                                    <div>
+                                        <span class="badge ${statusClass}">${a.status}</span>
+                                        ${a.meetingLink && a.status === 'approved' ?
+                                `<br><a href="${a.meetingLink}" target="_blank" class="badge-link" style="margin-top: 0.5rem; display: inline-block;">🔗 Join Meeting</a>` : ''}
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+            });
+        }
+
+        /**
+         * 4. Load Teacher Directory
+         * Fetches teachers filtering by name/subject if filter provided.
+         */
+        async function loadTeachers(filter = "") {
+            const grid = document.getElementById('teachers-grid');
+            grid.innerHTML = '<div class="col-span-full p-8 text-center text-muted">Searching instructors...</div>';
+
+            try {
+                // Fetch all teachers then filter client-side for simplicity
+                const q = query(collection(db, "users"), where("role", "==", "teacher"));
+                const snap = await getDocs(q);
+                grid.innerHTML = "";
+
+                let count = 0;
+                snap.forEach(docSnap => {
+                    const t = docSnap.data();
+                    const id = docSnap.id;
+                    const matches = t.name.toLowerCase().includes(filter.toLowerCase()) ||
+                        (t.subject && t.subject.toLowerCase().includes(filter.toLowerCase()));
+
+                    if (matches) {
+                        count++;
+                        grid.innerHTML += `
+                            <div class="teacher-card">
+                                <img src="${t.photoURL || 'https://via.placeholder.com/80'}" style="width:80px; height:80px; border-radius:50%; object-fit: cover; margin: 0 auto 1rem; border: 2px solid var(--primary);">
+                                <h3 class="text-lg font-bold mb-1">${t.name}</h3>
+                                <p class="text-main text-sm font-semibold mb-2">${t.subject || 'Expert Instructor'}</p>
+                                <p class="text-xs text-muted mb-4 line-clamp-2">${t.bio || 'Available for professional mentoring.'}</p>
+                                <button onclick="window.openBookingModal('${id}', '${t.name}')" class="btn btn-primary btn-sm w-full">Quick Book</button>
+                            </div>
+                        `;
+                    }
+                });
+
+                if (count === 0) grid.innerHTML = '<div class="col-span-full p-8 text-center text-muted">No teachers found matching your search.</div>';
+
+            } catch (error) {
+                console.error("Load Teachers Error:", error);
+                grid.innerHTML = '<div class="col-span-full text-danger p-4">Error loading teachers.</div>';
+            }
+        }
+
+        /**
+         * 5. Search Functionality
+         */
+        document.getElementById('teacher-search-input').addEventListener('input', (e) => {
+            loadTeachers(e.target.value);
+        });
+
+        /**
+         * 6. Modal & Booking Logic
+         */
+        window.openBookingModal = (id, name) => {
+            document.getElementById('modal-teacher-id').value = id;
+            document.getElementById('modal-teacher-name').value = name;
+            document.getElementById('modal-title').textContent = "Session with " + name;
+            document.getElementById('booking-modal').style.display = 'flex';
+        };
+
+        const closeModal = () => {
+            document.getElementById('booking-modal').style.display = 'none';
+            document.getElementById('quick-book-form').reset();
+        };
+
+        document.getElementById('close-modal-btn').addEventListener('click', closeModal);
+
+        document.getElementById('quick-book-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('confirm-booking-btn');
+            btn.disabled = true;
+            btn.textContent = "Sending...";
+            try {
+                await addDoc(collection(db, "appointments"), {
+                    studentId: auth.currentUser.uid,
+                    studentName: studentName,
+                    teacherId: document.getElementById('modal-teacher-id').value,
+                    teacherName: document.getElementById('modal-teacher-name').value,
+                    date: document.getElementById('modal-date').value,
+                    time: document.getElementById('modal-time').value,
+                    description: document.getElementById('modal-desc').value,
+                    status: 'pending',
+                    createdAt: serverTimestamp()
+                });
+
+                alert("Booking Request Sent Successfully!");
+                closeModal();
+            } catch (err) {
+                console.error(err);
+                alert("Could not process booking. Try again later.");
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Send Booking Request";
+            }
+        });
+    </script>
+</body>
+
+</html>

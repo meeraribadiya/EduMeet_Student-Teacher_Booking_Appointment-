@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - EduBook</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+
+<body>
+  <div id="navbar-container"></div>
+
+  <div class="container flex justify-center items-center" style="min-height: 80vh;">
+    <div class="card p-6" style="max-width: 400px; width: 100%;">
+      <h2 class="text-center" style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;">Welcome Back</h2>
+      <p class="text-center text-muted mb-4">Sign in to your account</p>
+
+      <form id="login-form">
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" id="email" class="form-input" placeholder="Enter your email" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" id="password" class="form-input" placeholder="Enter your password" required>
+        </div>
+
+        <div id="error-msg"
+          style="color: red; font-size: 0.875rem; display: none; margin-bottom: 1rem; padding: 10px; background: #ffeeee; border-radius: 5px; border: 1px solid #ffcccc;">
+        </div>
+
+        <button type="submit" id="login-btn" class="btn btn-primary" style="width: 100%;">Sign In</button>
+      </form>
+
+      <div class="mt-4 p-3" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+        <p style="font-size: 0.8rem; color: #64748b; margin: 0;"><strong>Note:</strong> Admin credentials are mentioned in the README file.</p>
+      </div>
+
+      <div class="text-center mt-4" style="font-size: 0.875rem;">
+        <p>Don't have an account? <a href="register.html" style="color: var(--primary);">Register Now</a></p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    // Import the correct helper functions from utils.js
+    import { handleLogin, renderNavbar } from '../assets/js/utils.js';
+
+    // Render the shared navbar
+    renderNavbar();
+
+    const loginForm = document.getElementById('login-form');
+    const errorMsg = document.getElementById('error-msg');
+    const btn = document.getElementById('login-btn');
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+
+    // If the user just registered, pre-fill the login form
+    // using the email and password stored in localStorage
+    try {
+      const saved = localStorage.getItem('eduMeet_last_credentials');
+      if (saved) {
+        const { email, password } = JSON.parse(saved);
+        if (email) emailInput.value = email;
+        if (password) passwordInput.value = password;
+      }
+    } catch (e) {
+      console.warn('Unable to pre-fill login credentials', e);
+    }
+
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      try {
+        // Update UI: show loading state
+        btn.disabled = true;
+        btn.textContent = "Authenticating...";
+        errorMsg.style.display = 'none';
+
+        // Call handleLogin from utils.js
+        // Note: Redirection to the correct dashboard happens inside handleLogin
+        await handleLogin(email, password);
+
+      } catch (error) {
+        // On error, reset button state
+        btn.disabled = false;
+        btn.textContent = "Sign In";
+        errorMsg.style.display = 'block';
+
+        // Convert Firebase error codes into user-friendly messages
+        console.error("Login Page Error Code:", error.code);
+
+        if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
+          errorMsg.textContent = "Wrong email or password! Please check again.";
+        } else if (error.code === 'auth/user-not-found') {
+          errorMsg.textContent = "This email is not registered. Click 'Register Now'.";
+        } else if (error.code === 'auth/too-many-requests') {
+          errorMsg.textContent = "Too many failed attempts. Try again later.";
+        } else {
+          errorMsg.textContent = "Login Failed: " + error.message;
+        }
+      }
+    });
+  </script>
+</body>
+
+</html>

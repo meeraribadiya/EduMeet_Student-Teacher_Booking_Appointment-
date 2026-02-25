@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Manage Requests - Teacher - EduBook</title>
+    <link rel="stylesheet" href="../../assets/css/style.css" />
+    <script type="module" src="../../assets/js/utils.js"></script>
+    <style>
+        /* Specific styles for status badges */
+        .badge {
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .badge-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .badge-approved {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .badge-rejected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="navbar-container"></div>
+
+    <main class="container" style="padding: 2rem 0;">
+        <header class="flex justify-between items-center mb-6">
+            <h1>Appointment Requests</h1>
+            <div class="btn-group">
+                <a class="btn btn-secondary btn-sm" href="teacher.html">Back to Dashboard</a>
+            </div>
+        </header>
+
+        <div class="card shadow-sm">
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="p-4">Student Name</th>
+                            <th class="p-4">Requested Slot</th>
+                            <th class="p-4">Subject/Topic</th>
+                            <th class="p-4">Current Status</th>
+                            <th class="p-4">Management</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody">
+                        <tr>
+                            <td colspan="5" class="p-8 text-center text-muted italic">
+                                Connecting to database...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script type="module">
+        import { db, auth, renderNavbar, requireAuth } from '../../assets/js/utils.js';
+        import { collection, query, where, onSnapshot, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+        // Security: Restrict access to teachers only
+        requireAuth('teacher');
+        renderNavbar();
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                syncAppointmentRequests(user.uid);
+            }
+        });
+
+        /**
+         * Real-time sync with Firestore for teacher-specific appointments
+         */
+        function syncAppointmentRequests(teacherId) {
+            const q = query(collection(db, "appointments"), where("teacherId", "==", teacherId));
+
+            onSnapshot(q, (snapshot) => {
+                const tbody = document.getElementById('tbody');
+
+                if (snapshot.empty) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-muted">No appointment requests found in your history.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = snapshot.docs
+                    .sort((a, b) => new Date(b.data().createdAt?.toDate()) - new Date(a.data().createdAt?.toDate()))
+                    .map(docSnapshot => {
+                        const data = docSnapshot.data();
+                        const docId = docSnapshot.id;
+
+                        // Determine badge style
+                        const statusLower = (data.status || 'pending').toLowerCase();
+                        const badgeClass = statusLower === 'approved' ? 'badge-approved' :
+                            (statusLower === 'pending' ? 'badge-pending' : 'badge-rejected');
+
+                        return `
+                            <tr style="border-bottom:1px solid var(--border-color);">
+                                <td class="p-4">
+                                    <div class="font-bold">${data.studentName}</div>
+                                    <div class="text-xs text-muted">${data.studentEmail || 'No email provided'}</div>
+                                </td>
+                                <td class="p-4">
+                                    <div class="text-sm">${data.date}</div>
+                                    <div class="text-xs font-bold text-main">${data.time}</div>
+                                </td>
+                                <td class="p-4">
+                                    <div class="text-sm" style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${data.description}">
+                                        ${data.description || 'General Inquiry'}
+                                    </div>
+                                </td>
+                                <td class="p-4"><span class="badge ${badgeClass}">${data.status}</span></td>
+                                <td class="p-4">
+                                    ${statusLower === 'pending' ? `
+                                        <div class="btn-group" style="display: flex; gap: 5px;">
+                                            <button onclick="approveSession('${docId}')" class="btn btn-primary btn-sm">Approve</button>
+                                            <button onclick="updateRequestStatus('${docId}', 'rejected')" class="btn btn-outline btn-sm text-danger">Decline</button>
+                                        </div>
+                                    ` : statusLower === 'approved' ? `
+                                        <div class="btn-group" style="display: flex; gap: 5px;">
+                                            <button onclick="completeAppointment('${docId}')" class="btn btn-warning btn-sm">Mark Completed</button>
+                                            <button onclick="approveSession('${docId}')" class="btn btn-secondary btn-sm">Update Link</button>
+                                        </div>
+                                    ` : `
+                                        <span class="text-xs text-muted font-bold">${statusLower.toUpperCase()}</span>
+                                    `}
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+            }, (error) => {
+                console.error("Snapshot Error:", error);
+                document.getElementById('tbody').innerHTML = '<tr><td colspan="5" class="p-4 text-center text-danger">Error loading data. Please refresh.</td></tr>';
+            });
+        }
+
+        window.completeAppointment = async (id) => {
+            if (!confirm("Are you sure you want to mark this appointment as Completed? This cannot be undone.")) return;
+            try {
+                const { serverTimestamp } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+                await updateDoc(doc(db, "appointments", id), {
+                    status: 'completed',
+                    completedAt: serverTimestamp()
+                });
+                alert("Appointment marked as completed!");
+            } catch (error) {
+                console.error("Error completing appointment:", error);
+                alert("Failed to update status: " + error.message);
+            }
+        };
+
+        /**
+         * Approves a session and requires a meeting link
+         */
+        window.approveSession = async (id) => {
+            const meetLink = prompt("Please provide the Virtual Meeting URL (Google Meet, Zoom, etc.):", "https://meet.google.com/");
+
+            if (meetLink && meetLink.trim() !== "") {
+                try {
+                    await updateDoc(doc(db, "appointments", id), {
+                        status: 'approved',
+                        meetingLink: meetLink.trim()
+                    });
+                    alert("Appointment Approved! Student will be notified.");
+                } catch (e) {
+                    console.error(e);
+                    alert("Failed to update appointment: " + e.message);
+                }
+            } else {
+                alert("A meeting link is required to approve the session.");
+            }
+        };
+
+        /**
+         * Generic status update for Decline/Reject
+         */
+        window.updateRequestStatus = async (id, newStatus) => {
+            if (confirm(`Are you sure you want to ${newStatus} this student request?`)) {
+                try {
+                    await updateDoc(doc(db, "appointments", id), { status: newStatus });
+                } catch (e) {
+                    console.error(e);
+                    alert("Update failed: " + e.message);
+                }
+            }
+        };
+    </script>
+</body>
+
+</html>

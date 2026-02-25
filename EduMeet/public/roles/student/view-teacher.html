@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teacher Profile - EduBook</title>
+  <link rel="stylesheet" href="../../assets/css/style.css">
+  <script type="module" src="../../assets/js/utils.js"></script>
+</head>
+
+<body>
+  <div id="navbar-container"></div>
+
+  <main class="container" style="padding: 2rem 1rem; max-width: 900px;">
+    <div id="profile-card" class="card p-0 overflow-hidden shadow-lg" style="border-radius: 20px;">
+      <p class="p-10 text-center">Loading Teacher's Portfolio...</p>
+    </div>
+  </main>
+
+  <div id="booking-modal"
+    style="display:none; position:fixed; inset:0; background: rgba(0,0,0,0.7); z-index:1000; align-items:center; justify-content:center; padding: 1rem; backdrop-filter: blur(4px);">
+    <div class="card" style="width:100%; max-width:450px; border-radius: 15px;">
+      <div class="flex justify-between items-center mb-4">
+        <h3 id="modal-title" class="font-bold text-xl">Book a Session</h3>
+        <button onclick="document.getElementById('booking-modal').style.display='none'"
+          style="background:none; border:none; font-size:1.8rem; cursor:pointer; color: #667;">&times;</button>
+      </div>
+      <form id="booking-form">
+        <div class="form-group mb-3">
+          <label class="form-label font-semibold">Select Date</label>
+          <input type="date" id="book-date" class="form-input" required>
+        </div>
+        <div class="form-group mb-3">
+          <label class="form-label font-semibold">Select Time</label>
+          <input type="time" id="book-time" class="form-input" required>
+        </div>
+        <div class="form-group mb-4">
+          <label class="form-label font-semibold">Topic of Discussion</label>
+          <textarea id="book-desc" class="form-input" rows="3" placeholder="Explain your doubts or topic briefly..."
+            required></textarea>
+        </div>
+        <button type="submit" id="confirm-btn" class="btn btn-primary w-full py-3 font-bold">Confirm Booking
+          Request</button>
+      </form>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, doc, getDoc, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { renderNavbar, requireAuth } from '../../assets/js/utils.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB49ZsoYZR0KxIFqzEj5aBAXMqQKznK3Bg",
+      authDomain: "student-teacher-booking-bb81a.firebaseapp.com",
+      projectId: "student-teacher-booking-bb81a",
+      storageBucket: "student-teacher-booking-bb81a.appspot.com",
+      messagingSenderId: "537650428593",
+      appId: "1:537650428593:web:d0e5a2310abf7748c7c090"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    requireAuth('student');
+    renderNavbar();
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const teacherId = urlParams.get('id');
+    let teacherData = null;
+    let studentName = "";
+
+    // Set minimum date to today
+    const dateInput = document.getElementById('book-date');
+    if (dateInput) {
+      dateInput.min = new Date().toISOString().split("T")[0];
+    }
+
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const sDoc = await getDoc(doc(db, "users", user.uid));
+        if (sDoc.exists()) studentName = sDoc.data().name;
+        loadProfile();
+      }
+    });
+
+    async function loadProfile() {
+      if (!teacherId) {
+        document.getElementById('profile-card').innerHTML = "<p class='p-10 text-center'>Teacher ID not found.</p>";
+        return;
+      }
+
+      try {
+        const docSnap = await getDoc(doc(db, "users", teacherId));
+        if (docSnap.exists()) {
+          teacherData = docSnap.data();
+          renderUI(teacherData);
+        } else {
+          document.getElementById('profile-card').innerHTML = "<p class='p-10 text-center'>Teacher profile doesn't exist.</p>";
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    function renderUI(t) {
+      document.getElementById('profile-card').innerHTML = `
+            <div class="flex flex-col md:row">
+                <div class="md:w-1/3 bg-gray-50 p-8 text-center border-r" style="background: #f8fafc;">
+                    <div style="position: relative; display: inline-block;">
+                        <img src="${t.photoURL || '../../assets/img/default-teacher.png'}" 
+                             style="width:160px; height:160px; border-radius:50%; object-fit:cover; margin-bottom: 1.5rem; border:4px solid #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                    </div>
+                    <h2 class="text-2xl font-bold" style="color: #2d3436;">${t.name}</h2>
+                    <p class="text-primary font-bold mb-6" style="background: #e0f2fe; display: inline-block; padding: 4px 12px; border-radius: 8px; font-size: 0.9rem;">${t.subject || 'Expert Mentor'}</p>
+                    <button id="open-modal-btn" class="btn btn-primary w-full py-3 shadow-md">Book Appointment</button>
+                </div>
+                <div class="md:w-2/3 p-8">
+                    <h4 class="text-muted text-xs uppercase font-bold mb-3" style="letter-spacing: 1px; color: #64748b;">About the Teacher</h4>
+                    <p class="mb-8 text-lg" style="color: #475569; line-height: 1.6;">${t.bio || 'This teacher is a dedicated professional committed to student success but hasn\'t added a bio yet.'}</p>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 p-6" style="background: #f1f5f9; border-radius: 12px;">
+                        <div>
+                            <h4 class="font-bold mb-1 text-sm text-gray-500 uppercase">Experience</h4>
+                            <p class="font-semibold text-gray-800">${t.experience || '3+ Years in Education'}</p>
+                        </div>
+                        <div>
+                            <h4 class="font-bold mb-1 text-sm text-gray-500 uppercase">Education</h4>
+                            <p class="font-semibold text-gray-800">${t.education || 'Certified Educator'}</p>
+                        </div>
+                        <div>
+                            <h4 class="font-bold mb-1 text-sm text-gray-500 uppercase">Rating</h4>
+                            <p class="font-semibold text-yellow-500">★★★★★ (5.0)</p>
+                        </div>
+                         <div>
+                            <h4 class="font-bold mb-1 text-sm text-gray-500 uppercase">Availability</h4>
+                            <p class="font-semibold text-green-600">Available for Online Sessions</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+      document.getElementById('open-modal-btn').onclick = () => {
+        document.getElementById('modal-title').textContent = `Booking with ${t.name}`;
+        document.getElementById('booking-modal').style.display = 'flex';
+      };
+    }
+
+    document.getElementById('booking-form').onsubmit = async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('confirm-btn');
+      btn.disabled = true;
+      btn.textContent = "Sending Request...";
+
+      try {
+        await addDoc(collection(db, "appointments"), {
+          teacherId: teacherId,
+          teacherName: teacherData.name,
+          studentId: auth.currentUser.uid,
+          studentName: studentName,
+          studentEmail: auth.currentUser.email,
+          date: document.getElementById('book-date').value,
+          time: document.getElementById('book-time').value,
+          description: document.getElementById('book-desc').value,
+          status: 'pending',
+          meetingLink: '', // Teacher will update this later
+          createdAt: serverTimestamp()
+        });
+
+        alert("Appointment request sent successfully! Redirecting to history...");
+        window.location.href = "view-appointments.html";
+      } catch (err) {
+        console.error(err);
+        alert("Something went wrong: " + err.message);
+        btn.disabled = false;
+        btn.textContent = "Confirm Booking Request";
+      }
+    };
+  </script>
+</body>
+
+</html>

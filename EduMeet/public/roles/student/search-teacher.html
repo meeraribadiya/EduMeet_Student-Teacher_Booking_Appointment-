@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Find a Teacher - EduMeet</title>
+  <link rel="stylesheet" href="../../assets/css/style.css">
+  <script type="module" src="../../assets/js/utils.js"></script>
+</head>
+
+<body>
+  <div id="navbar-container"></div>
+
+  <main class="container" style="padding: 2rem 1rem;">
+    <h1 class="text-2xl font-bold mb-6 text-center">Find Your Perfect Mentor</h1>
+
+    <div class="card mb-8 p-6 shadow-sm">
+      <div class="flex flex-col md:flex-row gap-4">
+        <div style="flex: 2;">
+          <label class="text-xs font-bold uppercase text-muted mb-1 block">Search Name</label>
+          <input type="text" id="search-input" class="form-input" placeholder="Search by teacher name...">
+        </div>
+        <div style="flex: 1;">
+          <label class="text-xs font-bold uppercase text-muted mb-1 block">Subject</label>
+          <select id="subject-filter" class="form-input">
+            <option value="">All Subjects</option>
+            <option value="Mathematics">Mathematics</option>
+            <option value="Science">Science</option>
+            <option value="Physics">Physics</option>
+            <option value="Chemistry">Chemistry</option>
+            <option value="Biology">Biology</option>
+            <option value="Computer Science">Computer Science</option>
+            <option value="English">English</option>
+            <option value="History">History</option>
+            <option value="Arts">Arts</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div id="teachers-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <p class="p-10 text-center" style="grid-column: 1/-1;">Loading teachers...</p>
+    </div>
+  </main>
+
+  <div id="booking-modal"
+    style="display:none; position:fixed; inset:0; background: rgba(0,0,0,0.7); z-index:1000; align-items:center; justify-content:center; padding: 1rem; backdrop-filter: blur(4px);">
+    <div class="card" style="width:100%; max-width:450px; border-radius: 15px;">
+      <div class="flex justify-between items-center mb-4">
+        <h3 id="modal-title" class="font-bold text-xl">Book a Session</h3>
+        <button id="close-modal"
+          style="background:none; border:none; font-size:2rem; cursor:pointer; color:#999;">&times;</button>
+      </div>
+      <form id="booking-form">
+        <input type="hidden" id="teacher-id">
+        <input type="hidden" id="teacher-name-hidden">
+
+        <div class="form-group mb-3">
+          <label class="form-label font-semibold">Select Date</label>
+          <input type="date" id="book-date" class="form-input" required>
+        </div>
+
+        <div class="form-group mb-3">
+          <label class="form-label font-semibold">Select Time</label>
+          <input type="time" id="book-time" class="form-input" required>
+        </div>
+
+        <div class="form-group mb-4">
+          <label class="form-label font-semibold">Topic/Message</label>
+          <textarea id="book-message" class="form-input" rows="3" placeholder="Explain what you want to learn..."
+            required></textarea>
+        </div>
+
+        <button type="submit" id="confirm-btn" class="btn btn-primary w-full py-3 font-bold">Confirm Booking
+          Request</button>
+      </form>
+    </div>
+  </div>
+
+  <script type="module">
+    import { db, auth, renderNavbar, requireAuth } from '../../assets/js/utils.js';
+    import { collection, query, where, getDocs, addDoc, doc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    requireAuth('student');
+    renderNavbar();
+
+    let allTeachers = [];
+    let studentData = null;
+    const grid = document.getElementById('teachers-grid');
+    const modal = document.getElementById('booking-modal');
+
+    // Set min date to today for booking
+    document.getElementById('book-date').min = new Date().toISOString().split("T")[0];
+
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // Get student's real name for booking
+        const sDoc = await getDoc(doc(db, "users", user.uid));
+        if (sDoc.exists()) studentData = sDoc.data();
+        loadTeachers();
+      }
+    });
+
+    async function loadTeachers() {
+      try {
+        const q = query(collection(db, "users"), where("role", "==", "teacher"));
+        const querySnapshot = await getDocs(q);
+        allTeachers = [];
+        querySnapshot.forEach((doc) => {
+          allTeachers.push({ id: doc.id, ...doc.data() });
+        });
+        render(allTeachers);
+      } catch (error) {
+        console.error("Fetch Error:", error);
+        grid.innerHTML = `<p class="p-10 text-center text-danger">Failed to load teachers.</p>`;
+      }
+    }
+
+    function render(list) {
+      if (list.length === 0) {
+        grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 3rem;">
+            <p class="text-muted">No teachers found.</p>
+        </div>`;
+        return;
+      }
+
+      grid.innerHTML = list.map(t => {
+        // Dynamic Rating Logic
+        const avg = t.averageRating || "5.0";
+        const count = t.reviewCount || 0;
+
+        return `
+        <div class="card p-0 overflow-hidden shadow-sm flex flex-col hover-shadow transition-all" style="border-radius:12px; border: 1px solid #eee;">
+          <div style="height: 200px; background: #f8fafc; position: relative;">
+            <img src="${t.photoURL || '../../assets/img/default-teacher.png'}" style="width:100%; height:100%; object-fit:cover;">
+            
+            <div style="position:absolute; top:10px; right:10px; background:white; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:bold; color:#f1c40f; box-shadow:0 2px 5px rgba(0,0,0,0.1); display:flex; align-items:center; gap:4px;">
+                ★ ${avg} ${count > 0 ? `<span style="color:#999; font-weight:normal;">(${count})</span>` : ''}
+            </div>
+          </div>
+          <div class="p-5 flex-1">
+            <h3 class="font-bold text-xl mb-1">${t.name}</h3>
+            <p class="text-primary text-sm font-bold mb-3" style="background:#e0f2fe; display:inline-block; padding:2px 10px; border-radius:4px;">
+                ${t.subject || 'Expert Mentor'}
+            </p>
+            <p class="text-muted text-sm mb-5" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                ${t.bio && t.bio !== 'no' ? t.bio : 'Expert educator available for personalized learning sessions.'}
+            </p>
+            
+            <div class="flex gap-3 mt-auto">
+              <a href="view-teacher.html?id=${t.id}" class="btn btn-outline btn-sm flex-1 text-center">Profile</a>
+              <button class="btn btn-primary btn-sm flex-1 book-btn" data-id="${t.id}" data-name="${t.name}">Book Now</button>
+            </div>
+          </div>
+        </div>
+      `;
+      }).join('');
+
+
+      // Modal open events
+      grid.querySelectorAll('.book-btn').forEach(btn => {
+        btn.onclick = () => {
+          document.getElementById('modal-title').textContent = `Booking with ${btn.dataset.name}`;
+          document.getElementById('teacher-id').value = btn.dataset.id;
+          document.getElementById('teacher-name-hidden').value = btn.dataset.name;
+          modal.style.display = 'flex';
+        };
+      });
+    }
+
+    // Modal Close
+    document.getElementById('close-modal').onclick = () => modal.style.display = 'none';
+
+    // Form Submit to Firestore
+    document.getElementById('booking-form').onsubmit = async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('confirm-btn');
+      btn.disabled = true;
+      btn.textContent = "Processing...";
+      try {
+        await addDoc(collection(db, "appointments"), {
+          teacherId: document.getElementById('teacher-id').value,
+          teacherName: document.getElementById('teacher-name-hidden').value,
+          studentId: auth.currentUser.uid,
+          studentName: studentData ? studentData.name : "Student",
+          studentEmail: auth.currentUser.email,
+          date: document.getElementById('book-date').value,
+          time: document.getElementById('book-time').value,
+          message: document.getElementById('book-message').value,
+          status: 'pending',
+          createdAt: serverTimestamp()
+        });
+
+        alert("Success! Your booking request has been sent to the teacher.");
+        modal.style.display = 'none';
+        e.target.reset();
+        window.location.href = "view-appointments.html";
+      } catch (err) {
+        alert("Error: " + err.message);
+        btn.disabled = false;
+        btn.textContent = "Confirm Booking";
+      }
+    };
+
+    // Correct Filters Logic
+    const handleFilter = () => {
+      // 1. Get current values from input fields
+      const nameVal = document.getElementById('search-input').value.toLowerCase().trim();
+      const subVal = document.getElementById('subject-filter').value;
+
+      // 2. Filter the master list (allTeachers) based on criteria
+      const filtered = allTeachers.filter(t => {
+        // Check if teacher name contains the search text
+        const matchesName = t.name.toLowerCase().includes(nameVal);
+        // Check if subject matches (or if "All Subjects" is selected)
+        const matchesSubject = subVal === "" || (t.subject && t.subject === subVal);
+
+        // Return true only if BOTH match
+        return matchesName && matchesSubject;
+      });
+
+      // 3. Re-render the grid with filtered results
+      render(filtered);
+    };
+
+    // Attach event listeners to trigger filtering instantly on input
+    document.getElementById('search-input').addEventListener('input', handleFilter);
+    document.getElementById('subject-filter').addEventListener('change', handleFilter);
+
+  </script>
+</body>
+
+</html>

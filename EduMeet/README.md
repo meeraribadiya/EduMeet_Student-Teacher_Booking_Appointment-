@@ -1,0 +1,206 @@
+# EduMeet - Student-Teacher Appointment Booking System
+
+**EduMeet** is a modern, responsive web application designed to bridge the gap between students and teachers through an intuitive appointment scheduling interface. 
+
+---
+
+## 🚀 Live Demo
+Vercel: [edu-meet-gamma.vercel.app](https://edu-meet-gamma.vercel.app)
+
+---
+
+## 📖 Project Overview
+EduMeet provides a centralized platform for educational institutions to manage student-teacher interactions. It simplifies the process of finding educators, checking their availability, and booking sessions, ensuring a seamless experience for both parties.
+
+---
+
+## 🛠️ Technologies Used
+- **Frontend:** 
+  - HTML5 (Semantic Structure)
+  - CSS3 (Vanilla CSS, Responsive Design, Custom Grid System)
+  - JavaScript (ES6 Modules, Dynamic UI Rendering)
+- **Backend & Services:**
+  - **Firebase Authentication:** Secure login and role-based access control.
+  - **Firebase Firestore:** Real-time NoSQL database for users and appointments.
+- **Deployment:**
+  - Vercel (Primary Hosting)
+  - Firebase Hosting (Alternative)
+- **Typography:** Inter (via Google Fonts)
+
+---
+
+## ✨ Features
+
+### 🔑 Authentication
+- Role-based registration and login system (Admin, Teacher, Student)
+- Secure session management using Firebase Auth and local storage.
+- Password-protected access with proper authentication flows.
+
+### 🛡️ Admin Features
+- **Dashboard:** Real-time overview of system statistics and user management.
+- **Teacher Management:** Approve and manage existing teacher profiles.
+- **Student Approvals:** Review and approve student registration requests.
+- **Message Management:** Handle contact messages and user inquiries.
+- **Access Control:** Oversee user roles and system integrity.
+
+### 👨‍🏫 Teacher Features
+- **Dashboard:** Real-time view of upcoming and pending appointments.
+- **Appointment Management:** Approve or reject student requests with meeting link integration.
+- **Availability Scheduling:** Set and manage custom time slots for student bookings.
+- **Profile Settings:** Customize professional details, subjects, and experience.
+- **Session History:** Complete view of all past and upcoming appointments.
+
+### 🎓 Student Features
+- **Teacher Search & Browse:** Find teachers by name, subject, or department with real-time filtering.
+- **Detailed Profiles:** View teacher bios, expertise, ratings, and availability.
+- **Instant Booking:** Choose available slots and book appointments instantly.
+- **Appointment Tracking:** Monitor status of requests (Pending, Approved, Completed, Rejected).
+- **Rating System:** Rate teachers after completed sessions.
+
+---
+
+## 🔥 Firebase Usage
+- **Real-time Synchronization:** Appointments and profile updates reflect instantly across dashboards.
+- **Scalable Database:** Firestore handles complex relationships between students, teachers, and schedules.
+- **Secure Auth:** Direct integration with Firebase Auth ensures user data protection.
+- **Cloud Functions:** Server-side logic for secure operations.
+
+---
+
+## 🔐 Default Credentials
+
+For testing and administrative purposes, use the following admin credentials:
+
+| **Admin** | `admin@gmail.com` | `admin4545@#` |
+
+**Note:** 
+- Only admin credentials are provided above for testing purposes
+- **Students** and **Teachers** can register themselves using the registration form
+- Students get automatic approval after registration
+- Teachers need admin approval before they can login (admin can approve from admin panel)
+- Admin can add teachers directly from the admin panel (they receive temporary password `teacher123`)
+
+---
+
+## 💻 How to Run Project
+
+### 1. Prerequisites
+- A modern web browser (Chrome, Firefox, Safari, Edge)
+- A local server environment (required for ES6 modules)
+- Node.js (optional, for local development server)
+
+### 2. Setup
+1. **Clone the repository:**
+   ```bash
+   git clone <repository-url>
+   ```
+2. **Navigate to project directory:**
+   ```bash
+   cd Student-Teacher_Booking Appointment
+   ```
+
+### 3. Execution
+- **Using VS Code Live Server (Recommended):**
+  - Open the project in VS Code
+  - Install "Live Server" extension
+  - Right-click `public/index.html` and select **"Open with Live Server"**
+- **Using Node.js:**
+  ```bash
+  cd public
+  npx serve
+  ```
+- **Using Python:**
+  ```bash
+  cd public
+  python -m http.server 8000
+  ```
+
+---
+
+## 📂 Project Structure
+```text
+Student-Teacher_Booking Appointment/
+├── public/
+│   ├── assets/
+│   │   ├── css/
+│   │   │   ├── style.css          # Main stylesheet with responsive design
+│   │   │   └── variables.css      # CSS variables and theme definitions
+│   │   ├── js/
+│   │   │   ├── utils.js           # Firebase utilities and authentication
+│   │   │   ├── data.js            # Mock data and helper functions
+│   │   │   └── student.js         # Student-specific functionality
+│   │   └── img/                   # Images and assets
+│   ├── auth/
+│   │   ├── login.html             # Login page
+│   │   └── register.html          # Registration page
+│   ├── roles/
+│   │   ├── admin/
+│   │   │   ├── admin.html         # Admin dashboard
+│   │   │   └── manage-teacher.html # Manage existing teachers
+│   │   ├── teacher/
+│   │   │   ├── teacher.html       # Teacher dashboard
+│   │   │   ├── all-appointments.html # View all appointments
+│   │   │   ├── approve-appointment.html # Manage requests
+│   │   │   ├── schedule-appointment.html # Create appointments
+│   │   │   └── profile-settings.html # Teacher profile
+│   │   └── student/
+│   │       ├── student.html       # Student dashboard
+│   │       ├── search-teacher.html # Find teachers
+│   │       ├── book-appointment.html # Book appointments
+│   │       ├── view-appointments.html # Appointment history
+│   │       └── view-teacher.html   # Teacher details
+│   ├── about.html                 # About page
+│   ├── contact.html               # Contact page
+│   ├── privacy.html               # Privacy policy
+│   ├── terms.html                 # Terms of service
+│   └── index.html                 # Landing page
+├── firebase.json                  # Firebase configuration
+├── vercel.json                    # Vercel deployment settings
+└── README.md                      # This file
+```
+
+---
+
+## 🎨 Design & Responsiveness
+- **Mobile-First Design:** Fully responsive across all devices (mobile, tablet, desktop)
+- **Modern UI:** Clean, professional interface with smooth animations
+- **Accessibility:** Semantic HTML5, ARIA labels, keyboard navigation
+- **Table Responsiveness:** Horizontal scrolling for all data tables with proper mobile handling
+- **Dark Mode Support:** CSS variables for easy theme switching
+
+---
+
+## 🔧 Recent Improvements
+- ✅ Fixed teacher addition issue with proper Firebase Auth integration
+- ✅ Added horizontal scroll to all tables for better mobile experience
+- ✅ Improved responsive design across all devices
+- ✅ Enhanced button styles and UI components
+- ✅ Added comprehensive CSS utilities and text classes
+- ✅ Fixed authentication flows and user management
+
+---
+
+## 🚀 Deployment
+- **Vercel:** Automatic deployment from Git repository
+- **Firebase Hosting:** Alternative hosting option
+- **Static Hosting:** Can be deployed on any static hosting service
+
+---
+
+## 🤝 Contributing
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+---
+
+## 📞 Support
+For issues, questions, or support, please:
+- Create an issue in the repository
+- Contact through the project's contact form
+
+---
+
+&copy; 2026 EduMeet. Built with ❤️ for better education.

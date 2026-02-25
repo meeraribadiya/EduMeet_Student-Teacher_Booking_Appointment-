@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Dashboard - EduBook</title>
+    <link rel="stylesheet" href="../../assets/css/style.css">
+    <script type="module" src="../../assets/js/utils.js"></script>
+    <style>
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Professional Status Badges */
+        .badge-pending {
+            background: #fff3cd;
+            color: #856404;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: capitalize;
+        }
+
+        .badge-approved {
+            background: #d4edda;
+            color: #155724;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: capitalize;
+        }
+
+        .badge-rejected {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: capitalize;
+        }
+
+        .sidebar-link.active {
+            background-color: var(--primary-light);
+            color: var(--primary);
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="navbar-container"></div>
+
+    <!-- Mobile Sidebar Toggle & Backdrop -->
+    <button class="sidebar-toggle" onclick="window.toggleSidebar()" aria-label="Toggle Sidebar">
+        <span></span>
+    </button>
+    <div class="sidebar-backdrop" onclick="window.toggleSidebar()"></div>
+
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h3>Teacher Panel</h3>
+            </div>
+            <div class="mb-4 text-sm text-muted">
+                Welcome, <span id="teacher-name-display" class="font-bold text-main welcome-name">Loading
+                    Profile...</span>
+            </div>
+            <ul class="sidebar-nav">
+                <li><a href="#" class="sidebar-link active" data-tab="dashboard">Overview</a></li>
+                <li><a href="#" class="sidebar-link" data-tab="requests">Appointment Requests</a></li>
+                <li><a href="#" class="sidebar-link" data-tab="schedule">Schedule New</a></li>
+                <li><a href="profile-settings.html" class="sidebar-link">Settings</a></li>
+            </ul>
+
+            <div class="mt-4 btn-group" style="display: flex; flex-direction: column; gap: 10px; padding: 10px;">
+                <p class="text-xs text-muted uppercase font-bold">Quick Access</p>
+                <a class="btn btn-outline btn-sm" href="all-appointments.html">View History</a>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div id="dashboard" class="tab-content active">
+                <h1 class="mb-4">Dashboard Overview</h1>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="card">
+                        <h3 class="text-muted text-sm">Upcoming Classes</h3>
+                        <p id="count-upcoming" style="font-size: 2.5rem; font-weight: bold; color: var(--primary);">0
+                        </p>
+                    </div>
+                    <div class="card">
+                        <h3 class="text-muted text-sm">Pending Approval</h3>
+                        <p id="count-pending" style="font-size: 2.5rem; font-weight: bold; color: var(--warning);">0</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3 class="mb-4">Today's Schedule</h3>
+                    <ul id="todays-schedule" class="mt-2 list-none p-0">
+                        <li class="text-muted italic">Checking for today's appointments...</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div id="requests" class="tab-content">
+                <h1 class="mb-4">Manage Requests</h1>
+                <div class="card">
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th class="p-4">Student Info</th>
+                                    <th class="p-4">Date & Time</th>
+                                    <th class="p-4">Topic</th>
+                                    <th class="p-4">Status</th>
+                                    <th class="p-4">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="requests-body">
+                                <tr>
+                                    <td colspan="5" class="p-4 text-center">Loading requests...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="schedule" class="tab-content">
+                <h1 class="mb-4">Schedule Custom Appointment</h1>
+                <div class="card max-w-2xl">
+                    <form id="schedule-form">
+                        <div class="form-group">
+                            <label class="form-label">Student Registered Email</label>
+                            <input type="email" id="student-email" class="form-input" placeholder="Enter student email"
+                                required>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="form-group">
+                                <label class="form-label">Date</label>
+                                <input type="date" id="date" class="form-input" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Time Slot</label>
+                                <input type="time" id="time" class="form-input" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Session Agenda</label>
+                            <textarea id="description" class="form-input" rows="3"
+                                placeholder="What is this session about?" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-full">Create Appointment</button>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module">
+        import { db, auth, renderNavbar, requireAuth, updateWelcomeUI } from '../../assets/js/utils.js';
+        import { collection, query, where, onSnapshot, doc, updateDoc, addDoc, getDocs, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+        // Initialize Security and UI
+        requireAuth('teacher');
+        renderNavbar();
+        updateWelcomeUI();
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                // Double check name display from Firestore
+                const userDoc = await getDoc(doc(db, "users", user.uid));
+                if (userDoc.exists()) {
+                    document.getElementById('teacher-name-display').textContent = userDoc.data().name;
+                }
+                initTeacherDashboard(user.uid);
+            }
+        });
+
+        function initTeacherDashboard(teacherId) {
+            const q = query(collection(db, "appointments"), where("teacherId", "==", teacherId));
+
+            onSnapshot(q, (snapshot) => {
+                const appointments = [];
+                snapshot.forEach(doc => appointments.push({ id: doc.id, ...doc.data() }));
+
+                // Update Overview Numbers
+                document.getElementById('count-upcoming').textContent = appointments.filter(a => a.status === 'approved').length;
+                document.getElementById('count-pending').textContent = appointments.filter(a => a.status === 'pending').length;
+
+                // Today's Date String (YYYY-MM-DD) - Local Time
+                const dateObj = new Date();
+                const year = dateObj.getFullYear();
+                const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                const day = String(dateObj.getDate()).padStart(2, '0');
+                const today = `${year}-${month}-${day}`;
+
+                // Render Today's Schedule (Approved & Completed)
+                renderTodaySchedule(appointments.filter(a => a.date === today && (a.status === 'approved' || a.status === 'completed')));
+
+                // Render Table
+                renderAppointmentTable(appointments);
+            });
+        }
+
+        function renderTodaySchedule(list) {
+            const container = document.getElementById('todays-schedule');
+            if (list.length === 0) {
+                container.innerHTML = '<li class="text-muted italic p-2">No appointments for today.</li>';
+                return;
+            }
+            container.innerHTML = list.map(a => {
+                let action = '';
+                if (a.status === 'completed') {
+                    action = '<span class="text-success text-xs font-bold border border-success p-1 rounded">Completed</span>';
+                } else {
+                    action = `<a href="${a.meetingLink || '#'}" target="_blank" class="btn btn-sm btn-primary" style="font-size: 11px;">Start Session</a>`;
+                }
+
+                return `
+                <li class="flex justify-between items-center p-3 mb-2 bg-light rounded border border-light">
+                    <span><strong class="text-main">${a.time}</strong> — ${a.studentName}</span>
+                    ${action}
+                </li>
+            `}).join('');
+        }
+
+        function renderAppointmentTable(apps) {
+            const tbody = document.getElementById('requests-body');
+            if (apps.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-muted" style="display: block; width: 100%;">No appointments found.</td></tr>';
+                return;
+            }
+
+            const now = new Date();
+
+            tbody.innerHTML = apps.sort((a, b) => new Date(b.date) - new Date(a.date)).map(app => {
+                const appDate = new Date(`${app.date}T${app.time}`);
+                const hasStarted = now >= appDate;
+
+                let actions = '';
+                const statusLower = (app.status || '').toLowerCase();
+                let statusBadge = `<span class="badge-${statusLower}">${app.status}</span>`;
+
+                if (statusLower === 'completed') {
+                    statusBadge = `<span class="badge-approved" style="background-color: #6c757d; color: white;">Completed</span>`;
+                }
+
+                if (statusLower === 'pending') {
+                    actions = `
+                        <div class="flex gap-2">
+                        <button onclick="window.manageAppointment('${app.id}', 'approve')" class="btn btn-primary btn-sm">Approve</button>
+                        <button onclick="window.manageAppointment('${app.id}', 'reject')" class="btn btn-outline btn-sm">Decline</button>
+                        </div>
+                    `;
+                } else if (statusLower === 'approved') {
+                    const linkBtn = `<div class="text-xs mb-1"><a href="${app.meetingLink || '#'}" target="_blank" class="text-main font-bold hover:underline" style="word-break: break-all;">Join Link</a></div>`;
+                    const upcomingTag = !hasStarted ? `<div class="text-center text-muted text-xs mb-2 p-1 border rounded bg-light inline-block">Upcoming</div>` : '';
+
+                    actions = `
+                        ${linkBtn}
+                        ${upcomingTag}
+                        <div class="flex flex-col gap-2 mt-2">
+                            <button onclick="window.completeAppointment('${app.id}')" class="btn btn-warning btn-sm" style="padding: 0.4rem 1rem; font-size: 0.8rem; min-height: auto;">Mark Completed</button>
+                            <button onclick="window.manageAppointment('${app.id}', 'approve')" class="btn btn-sm btn-secondary" style="padding: 0.4rem 1rem; font-size: 0.8rem; min-height: auto;">Update Link</button>
+                        </div>
+                    `;
+                } else if (statusLower === 'completed') {
+                    actions = '<span class="text-muted text-xs font-bold">Session Ended</span>';
+                } else {
+                    actions = '<span class="text-muted text-xs">Closed</span>';
+                }
+
+                return `
+                <tr style="border-bottom: 1px solid var(--border-color);">
+                    <td class="p-4" data-label="Student Info">
+                        <div class="font-bold">${app.studentName}</div>
+                        <div class="text-xs text-muted">${app.studentEmail || 'No Email'}</div>
+                    </td>
+                    <td class="p-4" data-label="Date & Time">
+                        <div class="text-sm">${app.date}</div>
+                        <div class="text-xs font-bold text-main">${app.time}</div>
+                    </td>
+                    <td class="p-4" data-label="Topic">
+                        <div style="word-break: break-word;" title="${app.description || app.message}">
+                            ${app.description || app.message || 'No Topic Provided'}
+                        </div>
+                    </td>
+                    <td class="p-4" data-label="Status">${statusBadge}</td>
+                    <td class="p-4" data-label="Actions">
+                        <div class="flex flex-col items-start gap-2">
+                        ${actions}
+                        </div>
+                    </td>
+                </tr>
+            `}).join('');
+        }
+
+        // Global Handlers attached to window for HTML buttons
+        window.toggleSidebar = () => {
+            document.querySelector('.sidebar').classList.toggle('open');
+            document.querySelector('.sidebar-backdrop').classList.toggle('active');
+            const toggleBtn = document.querySelector('.sidebar-toggle');
+            if (toggleBtn) toggleBtn.classList.toggle('open');
+        };
+
+        window.completeAppointment = async (id) => {
+            if (!confirm("Are you sure you want to mark this appointment as Completed? This cannot be undone.")) return;
+            try {
+                await updateDoc(doc(db, "appointments", id), {
+                    status: 'completed',
+                    completedAt: serverTimestamp()
+                });
+                alert("Appointment marked as completed!");
+            } catch (error) {
+                console.error("Error completing appointment:", error);
+                alert("Failed to update status: " + error.message);
+            }
+        };
+
+        window.manageAppointment = async (id, action) => {
+            try {
+                if (action === 'approve') {
+                    const link = prompt("Please provide the Virtual Meeting Link (Google Meet/Zoom):", "https://meet.google.com/...");
+                    if (!link) return;
+                    await updateDoc(doc(db, "appointments", id), {
+                        status: 'approved',
+                        meetingLink: link
+                    });
+                    alert("Appointment approved successfully!");
+                } else {
+                    if (confirm("Are you sure you want to decline this request?")) {
+                        await updateDoc(doc(db, "appointments", id), { status: 'rejected' });
+                    }
+                }
+            } catch (error) {
+                console.error("Operation failed:", error);
+                alert("Failed to update appointment: " + error.message);
+            }
+        };
+
+        // Manual Appointment Creation
+        document.getElementById('schedule-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('student-email').value;
+
+            try {
+                // Verify student exists
+                const q = query(collection(db, "users"), where("email", "==", email), where("role", "==", "student"));
+                const snap = await getDocs(q);
+
+                if (snap.empty) {
+                    alert("System Error: No registered student found with this email.");
+                    return;
+                }
+
+                const studentData = snap.docs[0].data();
+                const studentId = snap.docs[0].id;
+                const teacherName = document.getElementById('teacher-name-display').textContent;
+
+                await addDoc(collection(db, "appointments"), {
+                    teacherId: auth.currentUser.uid,
+                    teacherName: teacherName,
+                    studentId: studentId,
+                    studentName: studentData.name,
+                    studentEmail: email,
+                    date: document.getElementById('date').value,
+                    time: document.getElementById('time').value,
+                    description: document.getElementById('description').value,
+                    status: 'approved',
+                    meetingLink: prompt("Enter Session Link (Optional):") || "",
+                    createdAt: serverTimestamp()
+                });
+
+                alert("New appointment has been scheduled and student notified.");
+                e.target.reset();
+            } catch (err) {
+                alert("Error scheduling appointment: " + err.message);
+            }
+        });
+
+        // Tab Navigation Fix
+        document.querySelectorAll('.sidebar-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                const tabId = link.getAttribute('data-tab');
+
+                // Check if the link has a 'data-tab' attribute
+                if (tabId) {
+                    e.preventDefault();
+
+                    // Remove active class from all tabs and links
+                    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                    document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+
+                    // Add active class to clicked link and corresponding tab
+                    link.classList.add('active');
+                    const targetContent = document.getElementById(tabId);
+                    if (targetContent) targetContent.classList.add('active');
+                }
+                // If there is no 'data-tab' (e.g., external links like profile-settings.html), let the browser handle it normally
+            });
+        });
+    </script>
+</body>
+
+</html>

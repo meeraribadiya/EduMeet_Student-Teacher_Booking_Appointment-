@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile Settings - EduBook</title>
+    <link rel="stylesheet" href="../../assets/css/style.css">
+    <script type="module" src="../../assets/js/utils.js"></script>
+</head>
+
+<body>
+    <div id="navbar-container"></div>
+
+    <div class="dashboard-layout">
+        <main class="main-content" style="max-width: 700px; margin: 0 auto; padding: 2rem 1rem;">
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-2xl font-bold">Profile Settings</h1>
+                <a href="teacher.html" class="btn btn-outline btn-sm">Back to Dashboard</a>
+            </div>
+
+            <div class="card shadow-lg">
+                <h2 class="text-xl font-bold mb-2">Edit Your Public Profile</h2>
+                <p class="text-muted mb-6 text-sm">These details will be visible to students looking to book your
+                    sessions.</p>
+
+                <div class="flex flex-col items-center mb-8">
+                    <div style="position: relative;">
+                        <img id="profile-preview" src="https://via.placeholder.com/150" alt="Profile Photo"
+                            style="width: 140px; height: 140px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary); padding: 3px;">
+                    </div>
+                    <input type="file" id="profile-photo" accept="image/*" style="display:none">
+                    <button type="button" onclick="document.getElementById('profile-photo').click()"
+                        class="btn btn-secondary btn-sm mt-3">Change Photo</button>
+                    <small class="text-muted mt-1">Recommended: Square image, Max 1MB</small>
+                </div>
+
+                <form id="profile-form">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="form-group">
+                            <label class="form-label">Full Name</label>
+                            <input type="text" id="name" class="form-input" placeholder="Enter your full name" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Main Subject</label>
+                            <input type="text" id="subject" class="form-input" placeholder="e.g. Mathematics" required>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        <div class="form-group">
+                            <label class="form-label">Teaching Experience (Years)</label>
+                            <input type="number" id="experience" class="form-input" placeholder="e.g. 5" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Weekly Availability</label>
+                            <input type="text" id="availability" class="form-input"
+                                placeholder="e.g. Mon-Fri, 4pm - 8pm" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group mt-4">
+                        <label class="form-label">Expertise (Comma separated)</label>
+                        <input type="text" id="expertise" class="form-input"
+                            placeholder="e.g. Algebra, Calculus, Physics">
+                    </div>
+
+                    <div class="form-group mt-4">
+                        <label class="form-label">About Me (Bio)</label>
+                        <textarea id="bio" class="form-input" rows="5"
+                            placeholder="Share your teaching philosophy and background..."></textarea>
+                    </div>
+
+                    <button type="submit" id="save-btn" class="btn btn-primary w-full mt-6">Save Profile
+                        Changes</button>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <script type="module">
+        import { db, auth, renderNavbar, requireAuth } from '../../assets/js/utils.js';
+        import { doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+        // Enforce teacher-only access
+        requireAuth('teacher');
+        renderNavbar();
+
+        /**
+         * 1. Load Existing Profile Data
+         */
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                try {
+                    const docSnap = await getDoc(doc(db, "users", user.uid));
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+
+                        // Fill form fields
+                        document.getElementById('name').value = data.name || '';
+                        document.getElementById('subject').value = data.subject || '';
+                        document.getElementById('experience').value = data.experience || '';
+                        document.getElementById('bio').value = data.bio || '';
+                        document.getElementById('expertise').value = data.expertise || '';
+                        document.getElementById('availability').value = data.availability || '';
+
+                        // Load Profile Image if exists
+                        if (data.photoURL) {
+                            document.getElementById('profile-preview').src = data.photoURL;
+                        }
+                    }
+                } catch (error) {
+                    console.error("Error loading profile:", error);
+                }
+            }
+        });
+
+        /**
+         * 2. Save Updated Profile Data
+         */
+        document.getElementById('profile-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('save-btn');
+            const user = auth.currentUser;
+
+            if (!user) return;
+
+            try {
+                btn.disabled = true;
+                btn.textContent = "Updating Database...";
+
+                const updatedData = {
+                    name: document.getElementById('name').value,
+                    subject: document.getElementById('subject').value,
+                    experience: document.getElementById('experience').value,
+                    availability: document.getElementById('availability').value,
+                    expertise: document.getElementById('expertise').value,
+                    bio: document.getElementById('bio').value,
+                    photoURL: document.getElementById('profile-preview').src, // Storing as Base64 for simplicity
+                    updatedAt: new Date().toISOString()
+                };
+
+                // Update Firestore
+                await updateDoc(doc(db, "users", user.uid), updatedData);
+
+                // Update Local Storage so Navbar and Welcome UI reflect changes immediately
+                const localUser = JSON.parse(localStorage.getItem('booking_app_currentUser'));
+                localStorage.setItem('booking_app_currentUser', JSON.stringify({ ...localUser, ...updatedData }));
+
+                alert("Profile successfully updated!");
+                window.location.href = 'teacher.html';
+
+            } catch (error) {
+                console.error("Save Error:", error);
+                alert("Failed to save changes: " + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Save Profile Details";
+            }
+        });
+
+        /**
+         * 3. Handle Profile Photo Preview (Local Reader)
+         */
+        document.getElementById('profile-photo').addEventListener('change', function () {
+            const file = this.files[0];
+            if (file) {
+                // Validation: Max 1MB
+                if (file.size > 1048576) {
+                    alert("File is too large. Please select an image smaller than 1MB.");
+                    this.value = "";
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    document.getElementById('profile-preview').src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    </script>
+</body>
+
+</html>

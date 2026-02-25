@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register - EduBook</title>
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+
+<body>
+  <div id="navbar-container"></div>
+
+  <div class="container flex justify-center items-center" style="min-height: 80vh; padding: 2rem 0;">
+    <div class="card p-6" style="max-width: 500px; width: 100%;">
+      <h2 class="text-center" style="margin-bottom: 20px;">Create Account</h2>
+
+      <form id="register-form">
+        <div class="form-group">
+          <label class="form-label">I am a:</label>
+          <select id="role" class="form-input" required>
+            <option value="student">Student</option>
+            <option value="teacher">Teacher</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input type="text" id="name" class="form-input" placeholder="Full Name" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" id="email" class="form-input" placeholder="email@example.com" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" id="password" class="form-input" placeholder="Min 6 chars" required minlength="6">
+        </div>
+
+        <div id="status-msg"
+          style="display:none; padding: 12px; border-radius: 6px; margin-bottom: 15px; font-size: 14px;"></div>
+
+        <button type="submit" id="reg-btn" class="btn btn-primary" style="width: 100%;">Create Account</button>
+      </form>
+
+      <div class="text-center mt-4" style="font-size: 0.875rem;">
+        <p>Already have an account? <a href="login.html" style="color: var(--primary);">Login here</a></p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { createUserWithEmailAndPassword, updateProfile } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { renderNavbar, auth, db } from '../assets/js/utils.js';
+
+    const statusMsg = document.getElementById('status-msg');
+
+    function showStatus(text, isError) {
+      statusMsg.textContent = text;
+      statusMsg.style.display = 'block';
+      statusMsg.style.backgroundColor = isError ? '#ffebee' : '#e8f5e9';
+      statusMsg.style.color = isError ? '#c62828' : '#2e7d32';
+      statusMsg.style.border = `1px solid ${isError ? '#f44336' : '#4caf50'}`;
+    }
+
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('reg-btn');
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const name = document.getElementById('name').value;
+      const role = document.getElementById('role').value;
+
+      try {
+        btn.disabled = true;
+        btn.textContent = "Processing...";
+        statusMsg.style.display = 'none';
+
+        // 1. Create the account in Firebase Authentication
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        // 2. Update the Firebase Auth profile (displayName)
+        await updateProfile(user, { displayName: name });
+
+        // 3. Save additional user data in Firestore
+        // Note: The userId is the same as the registered user's uid
+        await setDoc(doc(db, "users", user.uid), {
+          uid: user.uid,
+          name: name,
+          email: email,
+          role: role,
+          // Both roles (student/teacher) are immediately approved for login
+          isApproved: true,
+          rating: role === 'teacher' ? 5 : null,
+          department: role === 'teacher' ? 'Not Specified' : null,
+          subject: role === 'teacher' ? 'Not Specified' : null,
+          photoURL: "../../assets/img/default-avatar.png",
+          createdAt: new Date().toISOString()
+        });
+
+        // Save email & password in localStorage
+        // so the login page can auto-fill them after redirect
+        localStorage.setItem('eduMeet_last_credentials', JSON.stringify({ email, password }));
+
+        showStatus("Registration successful! Redirecting to login...", false);
+        setTimeout(() => window.location.href = 'login.html', 3000);
+
+      } catch (error) {
+        btn.disabled = false;
+        btn.textContent = "Create Account";
+        console.error("Error Code:", error.code);
+
+        // Detailed error handling
+        if (error.code === 'auth/email-already-in-use') {
+          showStatus("This email is already registered. Please login.", true);
+        } else if (error.code === 'permission-denied') {
+          showStatus("Firestore Security Rules blocked the save. Please update your Rules!", true);
+        } else {
+          showStatus("Error: " + error.message, true);
+        }
+      }
+    });
+  </script>
+</body>
+
+</html>

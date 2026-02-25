@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Appointments - Student - EduBook</title>
+  <link rel="stylesheet" href="../../assets/css/style.css" />
+  <script type="module" src="../../assets/js/utils.js"></script>
+</head>
+
+<body>
+  <div id="navbar-container"></div>
+  <main class="container" style="padding: 2rem 0;">
+    <header class="flex justify-between items-center mb-4">
+      <h1>Appointment History</h1>
+      <div class="flex gap-2 btn-group">
+        <a href="student.html" class="btn btn-secondary">Dashboard</a>
+        <a href="book-appointment.html" class="btn btn-primary">New Booking</a>
+      </div>
+    </header>
+
+    <div class="card">
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th class="p-4">Teacher</th>
+              <th class="p-4">Date & Time</th>
+              <th class="p-4">Description</th>
+              <th class="p-4">Status</th>
+              <th class="p-4">Meeting Link</th>
+            </tr>
+          </thead>
+          <tbody id="tbody">
+            <tr>
+              <td colspan="5" class="p-4 text-center">Fetching your records...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <script type="module">
+      // Add these imports to your existing script
+      import { doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+      let selectedStars = 0;
+
+      // Star Selection Logic: Handles hover and click states for the 5-star rating system
+      document.querySelectorAll('.star').forEach(star => {
+        star.onclick = (e) => {
+          selectedStars = parseInt(e.target.dataset.value);
+          // Update visual state of stars based on selection
+          document.querySelectorAll('.star').forEach(s => {
+            s.style.color = parseInt(s.dataset.value) <= selectedStars ? '#f1c40f' : '#ccc';
+          });
+        };
+      });
+
+      // Opens the rating modal and populates it with the target teacher's info
+      window.openRatingModal = (teacherId, teacherName, appointmentId) => {
+        document.getElementById('rate-teacher-id').value = teacherId;
+        document.getElementById('rate-teacher-name').textContent = teacherName;
+        document.getElementById('rate-appointment-id').value = appointmentId; // Track which appointment is being rated
+        document.getElementById('rating-modal').style.display = 'flex';
+      };
+
+      // Handles the submission of a teacher review
+      document.getElementById('submit-rating-btn').onclick = async () => {
+        if (selectedStars === 0) return alert("Please select stars!");
+
+        const tId = document.getElementById('rate-teacher-id').value;
+        const btn = document.getElementById('submit-rating-btn');
+        btn.disabled = true;
+
+        try {
+          // 1. Fetch current teacher stats
+          const tRef = doc(db, "users", tId);
+          const tSnap = await getDoc(tRef);
+          const data = tSnap.data();
+
+          // 2. Calculate new rating averages
+          const newCount = (data.reviewCount || 0) + 1;
+          const newTotal = (data.totalRating || 0) + selectedStars;
+          const newAverage = (newTotal / newCount).toFixed(1);
+
+          // 3. Update teacher document atomically
+          await updateDoc(tRef, {
+            totalRating: newTotal,
+            reviewCount: newCount,
+            averageRating: newAverage
+          });
+
+          // 4. In a real app, you would also mark the appointment as 'reviewed' here
+          // await updateDoc(doc(db, "appointments", appointmentId), { hasReviewed: true });
+
+          alert("Rating submitted! Thank you.");
+          document.getElementById('rating-modal').style.display = 'none';
+        } catch (err) {
+          console.error(err);
+        } finally { btn.disabled = false; }
+      };
+    </script>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { renderNavbar, requireAuth } from '../../assets/js/utils.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyB49ZsoYZR0KxIFqzEj5aBAXMqQKznK3Bg",
+      authDomain: "student-teacher-booking-bb81a.firebaseapp.com",
+      projectId: "student-teacher-booking-bb81a",
+      storageBucket: "student-teacher-booking-bb81a.appspot.com",
+      messagingSenderId: "537650428593",
+      appId: "1:537650428593:web:d0e5a2310abf7748c7c090"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    // Authentication Checks
+    requireAuth('student');
+    renderNavbar();
+
+    // Listen for Auth State changes to load data only when user is ready
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        loadHistory(user.uid);
+      } else {
+        console.log("No user logged in");
+      }
+    });
+
+    /**
+     * Fetches and displays the student's appointment history in real-time.
+     * @param {string} studentId 
+     */
+    let allAppointments = []; // Store all fetched appointments
+    let filtersInitialized = false;
+
+    /**
+     * Fetches and displays the student's appointment history in real-time.
+     * @param {string} studentId 
+     */
+    function loadHistory(studentId) {
+      const q = query(
+        collection(db, "appointments"),
+        where("studentId", "==", studentId)
+      );
+
+      onSnapshot(q, (snapshot) => {
+        allAppointments = snapshot.docs;
+        if (!filtersInitialized) {
+          initFilters();
+          filtersInitialized = true;
+        }
+        filterAndRender();
+      }, (error) => {
+        console.error("Error fetching appointments: ", error);
+        document.getElementById('tbody').innerHTML = '<tr><td colspan="5" class="p-4 text-center text-danger" style="display: block; width: 100%;">Error loading data. Check console.</td></tr>';
+      });
+    }
+
+    function initFilters() {
+      const card = document.querySelector('.card');
+      const filterContainer = document.createElement('div');
+      filterContainer.style.cssText = 'display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem; width: 100%;';
+
+      filterContainer.innerHTML = `
+            <div style="flex: 1; min-width: 200px;">
+                <input type="text" id="searchInput" placeholder="Search by teacher..." style="width: 100%; padding: 0.6rem; border: 1px solid #ddd; border-radius: 6px;">
+            </div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <select id="statusFilter" style="padding: 0.6rem; border: 1px solid #ddd; border-radius: 6px;">
+                    <option value="all">All Status</option>
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="completed">Completed</option>
+                    <option value="rejected">Rejected</option>
+                </select>
+                <select id="timeFilter" style="padding: 0.6rem; border: 1px solid #ddd; border-radius: 6px;">
+                    <option value="all">All Time</option>
+                    <option value="upcoming">Upcoming</option>
+                    <option value="past">Past</option>
+                </select>
+                <select id="dateFilter" style="padding: 0.6rem; border: 1px solid #ddd; border-radius: 6px;">
+                    <option value="all">All Dates</option>
+                    <option value="today">Today</option>
+                    <option value="last7">Last 7 Days</option>
+                    <option value="custom">Custom</option>
+                </select>
+                <span id="customDateInputs" style="display: none; gap: 0.5rem;">
+                    <input type="date" id="startDate" style="padding: 0.6rem; border: 1px solid #ddd; border-radius: 6px;">
+                    <input type="date" id="endDate" style="padding: 0.6rem; border: 1px solid #ddd; border-radius: 6px;">
+                </span>
+                <select id="sortOrder" style="padding: 0.6rem; border: 1px solid #ddd; border-radius: 6px;">
+                    <option value="newest">Newest First</option>
+                    <option value="oldest">Oldest First</option>
+                    <option value="upcoming">Upcoming First</option>
+                </select>
+            </div>
+        `;
+
+      card.parentNode.insertBefore(filterContainer, card);
+
+      // Event Listeners
+      const inputs = ['searchInput', 'statusFilter', 'timeFilter', 'dateFilter', 'sortOrder', 'startDate', 'endDate'];
+      inputs.forEach(id => document.getElementById(id).addEventListener(id === 'searchInput' ? 'input' : 'change', filterAndRender));
+
+      document.getElementById('dateFilter').addEventListener('change', (e) => {
+        document.getElementById('customDateInputs').style.display = e.target.value === 'custom' ? 'flex' : 'none';
+      });
+    }
+
+    function filterAndRender() {
+      const tbody = document.getElementById('tbody');
+      if (!allAppointments.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center" style="display: block; width: 100%;">No appointments found.</td></tr>';
+        return;
+      }
+
+      const search = document.getElementById('searchInput').value.toLowerCase();
+      const status = document.getElementById('statusFilter').value;
+      const timeVal = document.getElementById('timeFilter').value;
+      const dateVal = document.getElementById('dateFilter').value;
+      const sort = document.getElementById('sortOrder').value;
+
+      const now = new Date();
+      const todayCommon = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+      // 1. Filter
+      let filtered = allAppointments.filter(docSnap => {
+        const data = docSnap.data();
+        const teacherName = (data.teacherName || '').toLowerCase();
+        const appStatus = (data.status || 'pending').toLowerCase();
+        const appDateStr = `${data.date} ${data.time}`;
+        const appDate = new Date(appDateStr);
+        const appTimestamp = appDate.getTime();
+        const appDateOnly = new Date(appDate.getFullYear(), appDate.getMonth(), appDate.getDate()).getTime();
+
+        // Search
+        if (search && !teacherName.includes(search)) return false;
+
+        // Status
+        if (status !== 'all' && appStatus !== status) return false;
+
+        // Time (Upcoming/Past)
+        if (timeVal === 'upcoming' && appTimestamp < now.getTime()) return false;
+        if (timeVal === 'past' && appTimestamp >= now.getTime()) return false;
+
+        // Date Range
+        if (dateVal === 'today') {
+          if (appDateOnly !== todayCommon) return false;
+        } else if (dateVal === 'last7') {
+          // Last 7 days including today
+          const sevenDaysAgo = todayCommon - (7 * 24 * 60 * 60 * 1000);
+          if (appTimestamp < sevenDaysAgo || appTimestamp > now.getTime()) return false;
+        } else if (dateVal === 'custom') {
+          const s = document.getElementById('startDate').value;
+          const e = document.getElementById('endDate').value;
+          if (s) {
+            const startTs = new Date(s).setHours(0, 0, 0, 0);
+            if (appTimestamp < startTs) return false;
+          }
+          if (e) {
+            const endTs = new Date(e).setHours(23, 59, 59, 999);
+            if (appTimestamp > endTs) return false;
+          }
+        }
+
+        return true;
+      });
+
+      // 2. Sort
+      filtered.sort((a, b) => {
+        const dA = new Date(`${a.data().date} ${a.data().time}`);
+        const dB = new Date(`${b.data().date} ${b.data().time}`);
+
+        if (sort === 'newest') return dB - dA;
+        if (sort === 'oldest') return dA - dB;
+        if (sort === 'upcoming') return dA - dB; // Ascending date
+        return 0;
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center" style="display: block; width: 100%;">No records match your filters.</td></tr>';
+        return;
+      }
+
+      // 3. Render
+      tbody.innerHTML = filtered.map(doc => {
+        const a = doc.data();
+        let statusIndex = a.status ? a.status.toLowerCase() : 'pending';
+        let badgeClass = 'badge-pending';
+        let displayStatus = statusIndex;
+
+        if (statusIndex === 'approved') badgeClass = 'badge-approved';
+        else if (statusIndex === 'rejected') badgeClass = 'badge-rejected';
+        else if (statusIndex === 'completed') {
+          displayStatus = 'Completed';
+        }
+
+        let badgeHtml = `<span class="badge ${badgeClass}">${displayStatus}</span>`;
+        if (statusIndex === 'completed') {
+          badgeHtml = `<span class="badge" style="background-color: #6c757d; color: white;">Completed</span>`;
+        }
+
+        let linkHtml = '<small class="text-muted">-</small>';
+        if (statusIndex === 'approved') {
+          linkHtml = a.meetingLink
+            ? `<a href="${a.meetingLink}" target="_blank" class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.875rem; width: 100%; display: block; text-align: center;">Join Meeting</a>`
+            : '<small class="text-muted">Waiting for link...</small>';
+        } else if (statusIndex === 'completed') {
+          linkHtml = '<span class="text-muted font-bold text-xs" style="color: #6c757d;">Session Ended</span>';
+        }
+
+        return `
+                    <tr style="border-bottom:1px solid var(--border-color);">
+                        <td class="p-4" data-label="Teacher"><strong>${a.teacherName || 'Unknown Teacher'}</strong></td>
+                        <td class="p-4" data-label="Date & Time">${a.date}<br><small class="text-muted">${a.time}</small></td>
+                        <td class="p-4" data-label="Description"><div style="word-break: break-word; font-size:0.9rem;">${a.description || a.message || 'N/A'}</div></td>
+                        <td class="p-4" data-label="Status">${badgeHtml}</td>
+                        <td class="p-4" data-label="Meeting Link">
+                            ${linkHtml}
+                        </td>
+                    </tr>
+                `;
+      }).join('');
+    }
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Schedule Appointment - Teacher - EduBook</title>
+  <link rel="stylesheet" href="../../assets/css/style.css" />
+  <script type="module" src="../../assets/js/utils.js"></script>
+</head>
+
+<body>
+  <div id="navbar-container"></div>
+
+  <main class="container" style="padding: 2rem 0;">
+    <h1 class="mb-4">Schedule New Session</h1>
+
+    <div class="card max-w-2xl">
+      <form id="schedule-form">
+        <div class="form-group">
+          <label class="form-label">Student Email Address</label>
+          <input type="email" id="student-email" class="form-input" placeholder="student@example.com" required />
+          <small class="text-muted">The student must already be registered in the system.</small>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="form-group">
+            <label class="form-label">Select Date</label>
+            <input type="date" id="date" class="form-input" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Select Time</label>
+            <input type="time" id="time" class="form-input" required />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Meeting Link (Optional)</label>
+          <input type="url" id="meeting-link" class="form-input" placeholder="https://meet.google.com/xxx-xxxx-xxx" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Topic / Description</label>
+          <textarea id="description" class="form-input" rows="3" placeholder="What will be discussed in this session?"
+            required></textarea>
+        </div>
+
+        <div class="btn-group" style="display: flex; gap: 10px; margin-top: 20px;">
+          <button type="submit" id="submit-btn" class="btn btn-primary">Create Appointment</button>
+          <a href="teacher.html" class="btn btn-secondary">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <script type="module">
+    // Importing shared logic from utils.js
+    import { db, auth, renderNavbar, requireAuth } from '../../assets/js/utils.js';
+    import { collection, query, where, getDocs, addDoc, serverTimestamp, getDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    // Security check: Only teachers allowed
+    requireAuth('teacher');
+    renderNavbar();
+
+    let teacherName = "";
+
+    // Get the current teacher's name from Firestore
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const tDoc = await getDoc(doc(db, "users", user.uid));
+          if (tDoc.exists()) {
+            teacherName = tDoc.data().name;
+          }
+        } catch (error) {
+          console.error("Error fetching teacher profile:", error);
+        }
+      }
+    });
+
+    // Form Submission Logic
+    document.getElementById('schedule-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const email = document.getElementById('student-email').value.trim();
+      const btn = document.getElementById('submit-btn');
+
+      // UI Feedback
+      btn.disabled = true;
+      btn.textContent = "Processing...";
+      try {
+        // 1. Find student by email in the 'users' collection
+        const studentQuery = query(
+          collection(db, "users"),
+          where("email", "==", email),
+          where("role", "==", "student")
+        );
+        const studentSnap = await getDocs(studentQuery);
+
+        if (studentSnap.empty) {
+          alert("Error: No student found with this email. Please ask the student to register first.");
+          btn.disabled = false;
+          btn.textContent = "Create Appointment";
+          return;
+        }
+
+        const studentData = studentSnap.docs[0].data();
+        const studentId = studentSnap.docs[0].id;
+
+        // 2. Create the appointment record
+        await addDoc(collection(db, "appointments"), {
+          teacherId: auth.currentUser.uid,
+          teacherName: teacherName || "Teacher",
+          studentId: studentId,
+          studentName: studentData.name,
+          studentEmail: email,
+          date: document.getElementById('date').value,
+          time: document.getElementById('time').value,
+          description: document.getElementById('description').value,
+          meetingLink: document.getElementById('meeting-link').value || "",
+          status: 'approved', // Auto-approved since the teacher is initiating it
+          createdAt: serverTimestamp()
+        });
+
+        alert("Success! The appointment has been scheduled.");
+        window.location.href = "teacher.html";
+
+      } catch (error) {
+        console.error("Scheduling Error:", error);
+        alert("An error occurred while scheduling the appointment. Please try again.");
+        btn.disabled = false;
+        btn.textContent = "Create Appointment";
+      }
+    });
+  </script>
+</body>
+
+</html>

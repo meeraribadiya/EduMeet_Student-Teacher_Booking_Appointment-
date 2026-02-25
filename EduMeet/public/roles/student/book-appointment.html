@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Book Appointment - EduBook</title>
+    <link rel="stylesheet" href="../../assets/css/style.css" />
+    <script type="module" src="../../assets/js/utils.js"></script>
+</head>
+
+<body>
+    <div id="navbar-container"></div>
+
+    <main class="container" style="padding: 2rem 0;">
+        <div class="flex items-center gap-4 mb-6">
+            <h1 class="text-2xl font-bold">Schedule a Session</h1>
+        </div>
+
+        <div class="card shadow-md" style="max-width: 600px; margin: 0 auto;">
+            <form id="book-form">
+                <div class="form-group mb-4">
+                    <label class="form-label font-bold">Choose Teacher</label>
+                    <select id="teacher-select" class="form-input" required>
+                        <option value="">Loading available teachers...</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div class="form-group">
+                        <label class="form-label font-bold">Preferred Date</label>
+                        <input type="date" id="date" class="form-input" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label font-bold">Preferred Time</label>
+                        <input type="time" id="time" class="form-input" required />
+                    </div>
+                </div>
+
+                <div class="form-group mb-6">
+                    <label class="form-label font-bold">Session Objective</label>
+                    <textarea id="desc" class="form-input" rows="4"
+                        placeholder="Please describe what you need help with (e.g., 'Need help with Quadratic Equations' or 'Mock Interview')..."
+                        required></textarea>
+                </div>
+
+                <div class="flex flex-col gap-3">
+                    <button type="submit" id="submit-btn" class="btn btn-primary w-full">Send Request to
+                        Teacher</button>
+                    <a href="student.html" class="btn btn-outline btn-sm text-center">Cancel and Return</a>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <script type="module">
+        import { db, auth, renderNavbar, requireAuth } from '../../assets/js/utils.js';
+        import { collection, getDocs, addDoc, query, where, doc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+        // Access control
+        requireAuth('student');
+        renderNavbar();
+
+        const selectEl = document.getElementById('teacher-select');
+        const urlParams = new URLSearchParams(window.location.search);
+        const preSelectedId = urlParams.get('teacherId');
+        let currentStudentData = null;
+
+        /**
+         * 1. Initialize Student Data & Load Dropdown
+         */
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                try {
+                    const sDoc = await getDoc(doc(db, "users", user.uid));
+                    if (sDoc.exists()) {
+                        currentStudentData = sDoc.data();
+                    }
+                    await loadTeacherDropdown();
+                } catch (err) {
+                    console.error("Initialization error:", err);
+                }
+            }
+        });
+
+        /**
+         * 2. Populate Teacher List
+         */
+        async function loadTeacherDropdown() {
+            try {
+                const q = query(collection(db, "users"), where("role", "==", "teacher"));
+                const snap = await getDocs(q);
+
+                let options = '<option value="">-- Click to Select a Teacher --</option>';
+
+                snap.forEach(docSnap => {
+                    const data = docSnap.data();
+                    const isSelected = (docSnap.id === preSelectedId) ? 'selected' : '';
+                    options += `<option value="${docSnap.id}" data-name="${data.name}" ${isSelected}>
+                                    ${data.name} (${data.subject || 'Expert Mentor'})
+                                </option>`;
+                });
+
+                selectEl.innerHTML = options;
+            } catch (err) {
+                selectEl.innerHTML = '<option value="">Error loading teachers</option>';
+            }
+        }
+
+        /**
+         * 3. Handle Form Submission
+         */
+        document.getElementById('book-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submit-btn');
+
+            // Validation
+            if (!selectEl.value) {
+                alert("Please select a teacher.");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = "Processing Request...";
+
+            const selectedOption = selectEl.options[selectEl.selectedIndex];
+            const teacherId = selectEl.value;
+            const teacherName = selectedOption.getAttribute('data-name');
+
+            try {
+                await addDoc(collection(db, "appointments"), {
+                    studentId: auth.currentUser.uid,
+                    studentName: currentStudentData?.name || "Student",
+                    studentEmail: auth.currentUser.email,
+                    teacherId: teacherId,
+                    teacherName: teacherName,
+                    date: document.getElementById('date').value,
+                    time: document.getElementById('time').value,
+                    description: document.getElementById('desc').value,
+                    status: 'pending',
+                    createdAt: serverTimestamp()
+                });
+
+                alert("Booking request sent! You can track the status on your dashboard.");
+                window.location.href = "student.html"; // Redirecting to main dashboard
+            } catch (error) {
+                console.error("Booking error:", error);
+                alert("Could not complete booking: " + error.message);
+                btn.disabled = false;
+                btn.textContent = "Send Request to Teacher";
+            }
+        });
+    </script>
+</body>
+
+</html>

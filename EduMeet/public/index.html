@@ -1,0 +1,117 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EduMeet - Book Your Teacher Appointment</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <div id="navbar-container"></div>
+  <header class="hero-section container">
+    <div class="grid md:grid-cols-2 gap-8 items-center">
+      <div class="hero-content">
+        <h1 class="hero-heading">Book Your Teacher Appointment <span style="color: var(--primary);">Anytime,
+            Anywhere</span></h1>
+        <p class="hero-tagline">Fast, easy & student-friendly scheduler. Connect with the best educators for your needs.
+        </p>
+        <div class="hero-buttons">
+          <a href="auth/login.html" class="btn btn-primary">BOOK APPOINTMENT</a>
+        </div>
+      </div>
+      <div class="hero-image-container">
+        <img src="assets/img/hero2.avif" alt="Happy Teachers and Students" class="hero-image">
+      </div>
+    </div>
+  </header>
+  <section id="how-it-works" class="steps-section">
+    <div class="container">
+      <h2 class="section-title">How It Works</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="step-card">
+          <h3 class="step-title">Choose Teacher</h3>
+          <p class="step-desc">Browse through our extensive list of qualified teachers and find the perfect match for
+            your subject.</p>
+        </div>
+        <div class="step-card">
+          <h3 class="step-title">Select Slot</h3>
+          <p class="step-desc">View their availability in real-time and pick a time slot that conveniently fits your
+            schedule.</p>
+        </div>
+        <div class="step-card">
+          <h3 class="step-title">Confirm</h3>
+          <p class="step-desc">Book your appointment with a click. You'll receive instant confirmation and reminders.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="teachers-section">
+    <div class="container">
+      <h2 class="section-title">Our Expert Teachers</h2>
+      <div class="teachers-showcase">
+        <div class="teacher-showcase-item">
+          <img src="assets/img/teacher2.jpg" alt="Teacher Sarah" class="teacher-showcase-img">
+          <div class="teacher-showcase-info">
+            <h3 class="teacher-showcase-name">Sarah Wilson</h3>
+            <p class="teacher-showcase-subject">Mathematics</p>
+            <div class="rating">⭐⭐⭐⭐⭐</div>
+          </div>
+        </div>
+        <div class="teacher-showcase-item">
+          <img src="assets/img/teacher5.jpg" alt="Teacher David" class="teacher-showcase-img">
+          <div class="teacher-showcase-info">
+            <h3 class="teacher-showcase-name">David Chen</h3>
+            <p class="teacher-showcase-subject">Physics</p>
+            <div class="rating">⭐⭐⭐⭐⭐</div>
+          </div>
+        </div>
+        <div class="teacher-showcase-item">
+          <img src="assets/img/teacher3.avif" alt="Teacher Emily" class="teacher-showcase-img">
+          <div class="teacher-showcase-info">
+            <h3 class="teacher-showcase-name">Emily Davis</h3>
+            <p class="teacher-showcase-subject">English Literature</p>
+            <div class="rating">⭐⭐⭐⭐⭐</div>
+          </div>
+        </div>
+        <div class="teacher-showcase-item">
+          <img src="assets/img/teacher4.avif" alt="Teacher Michael" class="teacher-showcase-img">
+          <div class="teacher-showcase-info">
+            <h3 class="teacher-showcase-name">Michael Brown</h3>
+            <p class="teacher-showcase-subject">Chemistry</p>
+            <div class="rating">⭐⭐⭐⭐⭐</div>
+          </div>
+        </div>
+        <div class="teacher-showcase-item">
+          <img src="assets/img/teacher6.avif" alt="Teacher Jessica" class="teacher-showcase-img">
+          <div class="teacher-showcase-info">
+            <h3 class="teacher-showcase-name">Jessica Miller</h3>
+            <p class="teacher-showcase-subject">Biology</p>
+            <div class="rating">⭐⭐⭐⭐⭐</div>
+          </div>
+        </div>
+        <div class="teacher-showcase-item">
+          <img src="assets/img/teacher1.jpg" alt="Teacher Robert" class="teacher-showcase-img">
+          <div class="teacher-showcase-info">
+            <h3 class="teacher-showcase-name">Robert Taylor</h3>
+            <p class="teacher-showcase-subject">History</p>
+            <div class="rating">⭐⭐⭐⭐⭐</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <script type="module" src="assets/js/utils.js"></script>
+  <script type="module" src="assets/js/data.js"></script>
+
+  <link type="text/css" rel="stylesheet" href="https://www.gstatic.com/firebasejs/ui/6.0.1/firebase-ui-auth.css" />
+  <script src="https://www.gstatic.com/firebasejs/ui/6.0.1/firebase-ui-auth.js"></script>
+  <script type="module">
+    import { auth } from "./assets/js/utils.js";
+    console.log("✅ Firebase connected via utils");
+  </script>
+</body>
+</html>
