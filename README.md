@@ -2,17 +2,26 @@
 
 **EduMeet** is a modern, responsive web application designed to bridge the gap between students and teachers through an intuitive appointment scheduling interface. 
 
----
 
 ## 🚀 Live Demo
 Vercel: [edu-meet-gamma.vercel.app](https://edu-meet-gamma.vercel.app)
 
----
+
 
 ## 📖 Project Overview
 EduMeet provides a centralized platform for educational institutions to manage student-teacher interactions. It simplifies the process of finding educators, checking their availability, and booking sessions, ensuring a seamless experience for both parties.
 
----
+
+
+## 🔐 Default Admin Credentials
+
+> **Note:**
+> ⚠️ These credentials are for testing purposes only.
+- **Role:** Admin  
+- **Email:** `admin@gmail.com`  
+- **Password:** `admin4545@#`
+- Only admin credentials are provided above for testing purposes
+- **Students** and **Teachers** can register themselves using the registration form
 
 ## 🛠️ Technologies Used
 - **Frontend:** 
@@ -27,7 +36,7 @@ EduMeet provides a centralized platform for educational institutions to manage s
   - Firebase Hosting (Alternative)
 - **Typography:** Inter (via Google Fonts)
 
----
+
 ## 🔹 Workflow of the System
 
 - Users register and log in through Firebase Authentication.
@@ -68,27 +77,13 @@ EduMeet provides a centralized platform for educational institutions to manage s
 - **Appointment Tracking:** Monitor status of requests (Pending, Approved, Completed, Rejected).
 - **Rating System:** Rate teachers after completed sessions.
 
----
+
 
 ## 🔥 Firebase Usage
 - **Real-time Synchronization:** Appointments and profile updates reflect instantly across dashboards.
 - **Scalable Database:** Firestore handles complex relationships between students, teachers, and schedules.
 - **Secure Auth:** Direct integration with Firebase Auth ensures user data protection.
 - **Cloud Functions:** Server-side logic for secure operations.
-
----
-
-## 🔐 Default Credentials
-
-For testing and administrative purposes, use the following admin credentials:
-
-| **Admin** | `admin@gmail.com` | `admin4545@#` |
-
-**Note:** 
-- Only admin credentials are provided above for testing purposes
-- **Students** and **Teachers** can register themselves using the registration form
-
----
 
 ## 💻 How to Run Project
 
@@ -123,7 +118,7 @@ For testing and administrative purposes, use the following admin credentials:
   python -m http.server 8000
   ```
 
----
+
 
 ## 📂 Project Structure
 ```text
@@ -167,7 +162,7 @@ Student-Teacher_Booking Appointment/
 └── README.md                      # This file
 ```
 
----
+
 
 ## 🎨 Design & Responsiveness
 - **Mobile-First Design:** Fully responsive across all devices (mobile, tablet, desktop)
@@ -176,19 +171,19 @@ Student-Teacher_Booking Appointment/
 - **Table Responsiveness:** Horizontal scrolling for all data tables with proper mobile handling
 - **Dark Mode Support:** CSS variables for easy theme switching
 
----
+
 
 ## 🚀 Deployment
 - **Vercel:** Automatic deployment from Git repository
 - **Firebase Hosting:** Alternative hosting option
 - **Static Hosting:** Can be deployed on any static hosting service
 
----
+
 
 ## 📞 Support
 For issues, questions, or support, please:
 - Contact through the project's contact form
 
----
+
 
 &copy; 2026 EduMeet. Built with ❤️ for better education.
