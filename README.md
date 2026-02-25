@@ -17,11 +17,12 @@ EduMeet provides a centralized platform for educational institutions to manage s
 
 > **Note:**
 > ⚠️ These credentials are for testing purposes only.
+>  Only admin credentials are provided above for testing purposes
+> **Students** and **Teachers** can register themselves using the registration form
 - **Role:** Admin  
 - **Email:** `admin@gmail.com`  
 - **Password:** `admin4545@#`
-- Only admin credentials are provided above for testing purposes
-- **Students** and **Teachers** can register themselves using the registration form
+
 
 ## 🛠️ Technologies Used
 - **Frontend:** 
@@ -118,8 +119,6 @@ EduMeet provides a centralized platform for educational institutions to manage s
   python -m http.server 8000
   ```
 
-
-
 ## 📂 Project Structure
 ```text
 Student-Teacher_Booking Appointment/
@@ -161,17 +160,6 @@ Student-Teacher_Booking Appointment/
 ├── vercel.json                    # Vercel deployment settings
 └── README.md                      # This file
 ```
-
-
-
-## 🎨 Design & Responsiveness
-- **Mobile-First Design:** Fully responsive across all devices (mobile, tablet, desktop)
-- **Modern UI:** Clean, professional interface with smooth animations
-- **Accessibility:** Semantic HTML5, ARIA labels, keyboard navigation
-- **Table Responsiveness:** Horizontal scrolling for all data tables with proper mobile handling
-- **Dark Mode Support:** CSS variables for easy theme switching
-
-
 
 ## 🚀 Deployment
 - **Vercel:** Automatic deployment from Git repository
