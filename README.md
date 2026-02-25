@@ -2,6 +2,10 @@
 
 **EduMeet** is a modern, responsive web application designed to bridge the gap between students and teachers through an intuitive appointment scheduling interface. 
 
+## 🌐 Live Demo
+
+https://edumeet-theta.vercel.app
+
 ## 🎥 Project Demo Video
 
  **[Watch Demo Video](https://drive.google.com/file/d/18-CNowlFDj9Qg18RctPSQ1ZWdaA1zyDh/view?usp=sharing)**
