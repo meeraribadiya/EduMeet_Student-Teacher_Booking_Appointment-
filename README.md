@@ -1,4 +1,4 @@
-# EduMeet - Student-Teacher Appointment Booking System
+# EduMeet - Student-Teacher Booking Appointment System
 
 **EduMeet** is a modern, responsive web application designed to bridge the gap between students and teachers through an intuitive appointment scheduling interface. 
 
@@ -6,7 +6,9 @@
 ## 🚀 Live Demo
 Vercel: [edu-meet-gamma.vercel.app](https://edu-meet-gamma.vercel.app)
 
+## 🎥 Project Demo Video
 
+ **[Watch Demo Video](https://drive.google.com/file/d/18-CNowlFDj9Qg18RctPSQ1ZWdaA1zyDh/view?usp=sharing)**
 
 ## 📖 Project Overview
 EduMeet provides a centralized platform for educational institutions to manage student-teacher interactions. It simplifies the process of finding educators, checking their availability, and booking sessions, ensuring a seamless experience for both parties.
